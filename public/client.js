@@ -89,6 +89,7 @@ function handleFileSelect(e) {
             selectedFileDiv.classList.add('show');
             importBtn.disabled = false;
             clearStatusMessages();
+            console.log('Archivo seleccionado:', file.name, file.size);
         } else {
             showStatusMessage('Por favor, selecciona un archivo JSON válido.', 'error');
             resetFileSelection();
@@ -122,21 +123,18 @@ function resetFileSelection() {
 async function handleFormSubmit(e) {
     e.preventDefault();
     
-    if (!selectedFile) {
+    if (!selectedFile || !selectedFile.name) {
         showStatusMessage('Por favor, selecciona un archivo JSON para importar.', 'error');
         return;
     }
 
     // Mostrar estado de carga
-    showStatusMessage(
-        '<span class="loading-spinner"></span>Subiendo archivo y creando tablero...', 
-        'info'
-    );
+    showStatusMessage('<span class="loading-spinner"></span>Subiendo archivo y creando tablero...', 'info');
     importBtn.disabled = true;
     importBtn.textContent = 'Importando...';
 
     try {
-        // Crear FormData y enviar archivo
+        console.log('Iniciando envío a /import-json con archivo:', selectedFile.name);
         const formData = new FormData();
         formData.append('jsonFile', selectedFile);
 
@@ -145,10 +143,10 @@ async function handleFormSubmit(e) {
             body: formData
         });
 
+        console.log('Respuesta recibida:', response.status, response.statusText);
         const result = await response.json();
 
         if (result.success) {
-            // Éxito - mostrar detalles de la importación
             const successMessage = `
                 <strong>✅ ¡Importación exitosa!</strong><br><br>
                 📋 <strong>Tablero:</strong> ${result.details.boardName}<br>
@@ -159,25 +157,17 @@ async function handleFormSubmit(e) {
                 </a>
             `;
             showStatusMessage(successMessage, 'success');
-            
-            // Reset form after success
             setTimeout(() => {
                 resetFileSelection();
                 importBtn.textContent = 'Importar Tablero a Trello';
             }, 1000);
         } else {
-            // Error del servidor
             showStatusMessage(`❌ Error: ${result.message}`, 'error');
         }
-
     } catch (error) {
         console.error('Error en la importación:', error);
-        showStatusMessage(
-            '❌ Error de conexión. Por favor, intenta nuevamente.', 
-            'error'
-        );
+        showStatusMessage('❌ Error de conexión. Por favor, intenta nuevamente.', 'error');
     } finally {
-        // Restaurar botón
         importBtn.disabled = false;
         importBtn.textContent = 'Importar Tablero a Trello';
     }
@@ -193,14 +183,11 @@ function showStatusMessage(message, type) {
     
     statusArea.appendChild(messageDiv);
     
-    // Auto-hide success messages after 10 seconds
     if (type === 'success') {
         setTimeout(() => {
             messageDiv.classList.remove('show');
             setTimeout(() => {
-                if (messageDiv.parentNode) {
-                    messageDiv.parentNode.removeChild(messageDiv);
-                }
+                if (messageDiv.parentNode) messageDiv.parentNode.removeChild(messageDiv);
             }, 300);
         }, 10000);
     }
@@ -212,20 +199,15 @@ function clearStatusMessages() {
     messages.forEach(message => {
         message.classList.remove('show');
         setTimeout(() => {
-            if (message.parentNode) {
-                message.parentNode.removeChild(message);
-            }
+            if (message.parentNode) message.parentNode.removeChild(message);
         }, 300);
     });
 }
 
 // Funcionalidad adicional para Power-Up
 if (typeof TrelloPowerUp !== 'undefined') {
-    // Función para renderizar la interfaz en el contexto de Trello
     window.TrelloRender = function(t) {
         return t.render(function() {
-            // La interfaz ya está cargada en el HTML
-            // Aquí podríamos añadir lógica adicional específica para el Power-Up
             console.log('Power-Up renderizado correctamente');
         });
     };
