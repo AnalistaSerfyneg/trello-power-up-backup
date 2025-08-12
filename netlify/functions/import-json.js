@@ -1,17 +1,28 @@
 exports.handler = async (event, context) => {
+  console.log('Método recibido:', event.httpMethod);
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method Not Allowed. Use POST.' })
+    };
   }
 
-  console.log('Solicitud recibida:', event.httpMethod, event.body);
+  console.log('Cuerpo recibido:', event.body);
 
   if (!event.body) {
-    return { statusCode: 400, body: JSON.stringify({ success: false, message: 'No se recibió datos' }) };
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ success: false, message: 'No se recibió datos' })
+    };
   }
 
-  // Simulación de éxito
+  // Simulación de procesamiento exitoso
   return {
     statusCode: 200,
-    body: JSON.stringify({ success: true, message: 'Archivo recibido', details: { boardName: 'Tablero de Prueba', listsCreated: 1, cardsCreated: 1, boardUrl: 'https://trello.com' } })
+    body: JSON.stringify({
+      success: true,
+      message: 'Archivo recibido con éxito',
+      details: { boardName: 'Tablero de Prueba', listsCreated: 1, cardsCreated: 1, boardUrl: 'https://trello.com' }
+    })
   };
 };
