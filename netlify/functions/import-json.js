@@ -9,25 +9,14 @@ exports.handler = async (event, context) => {
 
   console.log('Cuerpo recibido (raw):', event.body);
 
-  // Intentar parsear el cuerpo (aunque formData no será JSON puro)
-  let body;
-  try {
-    body = event.body ? event.body.toString() : null;
-  } catch (e) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ success: false, message: 'Error al procesar los datos' })
-    };
-  }
-
-  if (!body) {
+  if (!event.body) {
     return {
       statusCode: 400,
       body: JSON.stringify({ success: false, message: 'No se recibió datos' })
     };
   }
 
-  // Simulación de éxito (necesitarías busboy para procesar formData completo)
+  // Simulación de éxito sin intentar parsear como JSON
   return {
     statusCode: 200,
     body: JSON.stringify({
