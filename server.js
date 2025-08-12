@@ -1,6 +1,6 @@
 const express = require('express');
 const multer = require('multer');
-const Trello = require('node-trello');
+const Trello = require('trello-js');
 const path = require('path');
 require('dotenv').config();
 
