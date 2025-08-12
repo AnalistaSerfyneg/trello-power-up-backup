@@ -2,15 +2,10 @@ const express = require('express');
 const multer = require('multer');
 const Trello = require('trello');
 const path = require('path');
+const serverless = require('serverless-http'); // Importamos serverless-http
 require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 3000;
-
-require('dotenv').config();
-
-console.log(process.env.API_KEY); // para verificar
-
 
 // Configuración de multer para manejar archivos subidos
 const upload = multer({
@@ -29,10 +24,12 @@ const upload = multer({
 });
 
 // Middleware para servir archivos estáticos desde la carpeta public
-app.use(express.static('public'));
+// En Netlify, esto es gestionado por la configuración en netlify.toml
+// app.use(express.static('public'));
 app.use(express.json());
 
-// Ruta principal - sirve la interfaz del Power-Up
+// Ruta principal para manejar la interfaz del Power-Up
+// La raíz del sitio la gestiona Netlify sirviendo la carpeta 'public'
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
@@ -94,7 +91,6 @@ app.post('/import-json', upload.single('jsonFile'), async (req, res) => {
             });
           });
           
-          // Mapear ID original con ID nuevo para referencia posterior
           listMapping[list.id] = newList.id;
           console.log(`Lista creada: ${newList.name} (ID: ${newList.id})`);
         } catch (error) {
@@ -109,7 +105,6 @@ app.post('/import-json', upload.single('jsonFile'), async (req, res) => {
     if (jsonData.cards && jsonData.cards.length > 0) {
       for (const card of jsonData.cards) {
         try {
-          // Verificar que la tarjeta pertenece a una lista que se creó
           if (!listMapping[card.idList]) {
             console.log(`Saltando tarjeta "${card.name}" - lista no encontrada`);
             continue;
@@ -154,7 +149,6 @@ app.post('/import-json', upload.single('jsonFile'), async (req, res) => {
   } catch (error) {
     console.error('Error en importación:', error);
     
-    // Limpiar archivo temporal si existe
     if (req.file && req.file.path) {
       try {
         const fs = require('fs');
@@ -189,7 +183,6 @@ app.use((error, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Servidor ejecutándose en puerto ${PORT}`);
-  console.log(`Accede a la aplicación en: http://localhost:${PORT}`);
-});
+// Envolvemos la aplicación Express con serverless-http
+// Esto es lo que la hace compatible con Netlify Functions.
+module.exports.handler = serverless(app);
