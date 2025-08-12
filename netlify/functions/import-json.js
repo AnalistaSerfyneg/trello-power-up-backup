@@ -7,16 +7,27 @@ exports.handler = async (event, context) => {
     };
   }
 
-  console.log('Cuerpo recibido:', event.body);
+  console.log('Cuerpo recibido (raw):', event.body);
 
-  if (!event.body) {
+  // Intentar parsear el cuerpo (aunque formData no será JSON puro)
+  let body;
+  try {
+    body = event.body ? event.body.toString() : null;
+  } catch (e) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ success: false, message: 'Error al procesar los datos' })
+    };
+  }
+
+  if (!body) {
     return {
       statusCode: 400,
       body: JSON.stringify({ success: false, message: 'No se recibió datos' })
     };
   }
 
-  // Simulación de procesamiento exitoso
+  // Simulación de éxito (necesitarías busboy para procesar formData completo)
   return {
     statusCode: 200,
     body: JSON.stringify({

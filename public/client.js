@@ -119,7 +119,6 @@ function resetFileSelection() {
     fileInput.value = '';
 }
 
-// Manejo del envío del formulario
 async function handleFormSubmit(e) {
     e.preventDefault();
     
@@ -128,15 +127,15 @@ async function handleFormSubmit(e) {
         return;
     }
 
-    // Mostrar estado de carga
     showStatusMessage('<span class="loading-spinner"></span>Subiendo archivo y creando tablero...', 'info');
     importBtn.disabled = true;
     importBtn.textContent = 'Importando...';
 
     try {
-        console.log('Iniciando envío a /import-json con archivo:', selectedFile.name);
+        console.log('Iniciando envío a /import-json con método:', 'POST');
         const formData = new FormData();
         formData.append('jsonFile', selectedFile);
+        console.log('FormData contenido:', Object.fromEntries(formData)); // Esto intentará mostrar el contenido
 
         const response = await fetch('/import-json', {
             method: 'POST',
