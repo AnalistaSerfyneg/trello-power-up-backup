@@ -1,10 +1,10 @@
 [build]
-  command = "echo 'No build step required'" # No necesitamos un comando de build
-  publish = "public" # Servir archivos estáticos desde esta carpeta
+  command = "npm run build"
+  publish = "public"
 
 [functions]
   directory = "netlify/functions"
-  
+
 [[redirects]]
   from = "/import-json"
   to = "/.netlify/functions/import-json"

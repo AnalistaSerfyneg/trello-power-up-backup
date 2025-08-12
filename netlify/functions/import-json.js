@@ -2,8 +2,6 @@ const Trello = require('trello');
 const Busboy = require('busboy');
 
 exports.handler = async (event) => {
-    console.log("¡Función import-json ejecutándose!"); // <-- AGREGADO ESTE LOG
-    
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ message: 'Method Not Allowed' }) };
     }
@@ -40,19 +38,16 @@ exports.handler = async (event) => {
                 const apiToken = process.env.API_TOKEN;
 
                 if (!apiKey || !apiToken) {
-                    console.error("Faltan las credenciales de Trello.");
                     return resolve({ statusCode: 500, body: JSON.stringify({ success: false, message: 'Credenciales de Trello no configuradas.' }) });
                 }
                 
                 const trello = new Trello(apiKey, apiToken);
                 const boardName = jsonData.name ? `${jsonData.name} - Restaurado` : 'Tablero Restaurado';
 
-                // Usamos un try...catch para cada llamada a la API
                 let newBoard;
                 try {
                     newBoard = await new Promise((res, rej) => trello.post('/1/boards', { name: boardName, defaultLists: false }, (err, data) => err ? rej(err) : res(data)));
                 } catch (apiError) {
-                    console.error("Error al crear el tablero:", apiError);
                     return resolve({ statusCode: 500, body: JSON.stringify({ success: false, message: 'Error al crear el tablero en Trello.' }) });
                 }
 
@@ -64,9 +59,7 @@ exports.handler = async (event) => {
                             const newList = await new Promise((res, rej) => trello.post(`/1/boards/${newBoard.id}/lists`, { name: list.name, pos: list.pos || 'bottom' }, (err, data) => err ? rej(err) : res(data)));
                             listMapping[list.id] = newList.id;
                             listsCreated++;
-                        } catch (apiError) {
-                            console.error(`Error al crear la lista ${list.name}:`, apiError);
-                        }
+                        } catch (apiError) {}
                     }
                 }
                 
@@ -77,9 +70,7 @@ exports.handler = async (event) => {
                             try {
                                 await new Promise((res, rej) => trello.post('/1/cards', { name: card.name, desc: card.desc, idList: listMapping[card.idList], pos: card.pos }, (err, data) => err ? rej(err) : res(data)));
                                 cardsCreated++;
-                            } catch (apiError) {
-                                console.error(`Error al crear la tarjeta ${card.name}:`, apiError);
-                            }
+                            } catch (apiError) {}
                         }
                     }
                 }
@@ -98,7 +89,6 @@ exports.handler = async (event) => {
                 resolve({ statusCode: 200, body: JSON.stringify(responseData) });
 
             } catch (error) {
-                console.error('Error en la importación:', error);
                 resolve({ statusCode: 500, body: JSON.stringify({ success: false, message: `Error en la importación: ${error.message}` }) });
             }
         });
