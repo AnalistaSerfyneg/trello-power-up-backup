@@ -1,0 +1,9 @@
+[build]
+  base = "project"
+  command = "pwd && ls -la && npm run"
+  publish = "project/public"
+
+[[redirects]]
+  from = "/*"
+  to = "/.netlify/functions/server"
+  status = 200
