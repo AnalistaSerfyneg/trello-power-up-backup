@@ -1,25 +1,14 @@
 {
-  "name": "trello-powerup-importer",
+  "name": "trello-import-powerup",
   "version": "1.0.0",
-  "description": "Power-Up de Trello para importar tableros desde archivos JSON",
+  "description": "Trello Power-Up to import a JSON file.",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js",
-    "build": "echo 'No build step required'",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "npm install --prefix netlify/functions/",
+    "start": "node server.js"
   },
-  "keywords": [
-    "trello",
-    "powerup",
-    "json",
-    "import",
-    "board"
-  ],
-  "author": "",
-  "license": "MIT",
   "dependencies": {
-  "trello": "^0.11.0",
-  "busboy": "^1.6.0"
-}
+    "busboy": "^1.6.0",
+    "trello": "^0.11.0"
+  }
 }

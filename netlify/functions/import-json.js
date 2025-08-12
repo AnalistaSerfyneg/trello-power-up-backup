@@ -1,8 +1,9 @@
-// netlify/functions/import-json.js
 const Trello = require('trello');
 const Busboy = require('busboy');
 
 exports.handler = async (event) => {
+    console.log("¡Función import-json ejecutándose!"); // <-- AGREGADO ESTE LOG
+    
     if (event.httpMethod !== 'POST') {
         return { statusCode: 405, body: JSON.stringify({ message: 'Method Not Allowed' }) };
     }
