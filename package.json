@@ -19,10 +19,11 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "busboy": "^1.6.0",
+    "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "multer": "^1.4.5-lts.1",
-    "dotenv": "^16.3.1",
-    "trello": "^0.11.0",
-    "serverless-http": "^3.2.0" 
+    "serverless-http": "^3.2.0",
+    "trello": "^0.11.0"
   }
 }
