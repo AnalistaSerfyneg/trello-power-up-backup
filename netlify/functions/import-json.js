@@ -2,24 +2,29 @@ const Trello = require('trello');
 const Busboy = require('busboy');
 
 exports.handler = async (event, context) => {
-  // Asegurarse de que el método sea POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
       body: JSON.stringify({ message: 'Method Not Allowed' })
     };
   }
+  
+  if (!event.body) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ success: false, message: 'No se recibió ningún archivo.' })
+    };
+  }
 
-  // Usamos una promesa para manejar el stream de datos
-  return new Promise((resolve) => {
-    // Necesitas el 'content-type' para que Busboy funcione
-    const busboy = Busboy({
-      headers: {
-        'content-type': event.headers['content-type'],
-        ...event.headers
-      }
-    });
+  // La clave es pasar el cuerpo como un stream a Busboy
+  const busboy = Busboy({
+    headers: {
+      'content-type': event.headers['content-type'],
+      ...event.headers
+    }
+  });
 
+  return new Promise((resolve, reject) => {
     let fileContent = '';
 
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
@@ -32,43 +37,97 @@ exports.handler = async (event, context) => {
     });
 
     busboy.on('finish', async () => {
-      if (!fileContent) {
-        resolve({
-          statusCode: 400,
-          body: JSON.stringify({ success: false, message: 'No se subió ningún archivo' })
-        });
-        return;
-      }
-      
       try {
+        if (!fileContent) {
+          return resolve({
+            statusCode: 400,
+            body: JSON.stringify({ success: false, message: 'El archivo estaba vacío.' })
+          });
+        }
+        
         const jsonData = JSON.parse(fileContent);
 
-        // Aquí va tu lógica de Trello, la que tienes en tu server.js original
-        // Copia toda la lógica para crear el tablero, listas y tarjetas.
+        // --- TU LÓGICA DE TRELLO AQUÍ ---
+        const apiKey = process.env.API_KEY;
+        const apiToken = process.env.API_TOKEN;
+
+        if (!apiKey || !apiToken) {
+          console.error("Faltan las credenciales de Trello.");
+          return resolve({
+            statusCode: 500,
+            body: JSON.stringify({ success: false, message: 'Credenciales de Trello no configuradas.' })
+          });
+        }
         
-        // Simulación de éxito. Reemplaza con el resultado real de tu lógica.
-        const boardUrl = "https://trello.com/b/example"; // Debes obtener esto de la respuesta de Trello
+        const trello = new Trello(apiKey, apiToken);
+        const boardName = jsonData.name ? `${jsonData.name} - Restaurado` : 'Tablero Restaurado';
+        const newBoard = await new Promise((resolve, reject) => {
+          trello.post('/1/boards', { name: boardName, defaultLists: false }, (err, data) => {
+            if (err) reject(err);
+            else resolve(data);
+          });
+        });
+        
+        console.log(`Nuevo tablero creado: ${newBoard.name} (ID: ${newBoard.id})`);
+        
+        const listMapping = {};
+        if (jsonData.lists && jsonData.lists.length > 0) {
+          for (const list of jsonData.lists) {
+            const newList = await new Promise((resolve, reject) => {
+              trello.post(`/1/boards/${newBoard.id}/lists`, { name: list.name, pos: list.pos || 'bottom' }, (err, data) => {
+                if (err) reject(err);
+                else resolve(data);
+              });
+            });
+            listMapping[list.id] = newList.id;
+          }
+        }
+        
+        let cardsCreated = 0;
+        if (jsonData.cards && jsonData.cards.length > 0) {
+          for (const card of jsonData.cards) {
+            if (listMapping[card.idList]) {
+              await new Promise((resolve, reject) => {
+                trello.post('/1/cards', {
+                  name: card.name,
+                  desc: card.desc,
+                  idList: listMapping[card.idList],
+                  pos: card.pos
+                }, (err, data) => {
+                  if (err) reject(err);
+                  else resolve(data);
+                });
+              });
+              cardsCreated++;
+            }
+          }
+        }
+        
+        const responseData = {
+          success: true,
+          message: 'Tablero restaurado con éxito',
+          details: {
+            boardUrl: newBoard.url,
+            listsCreated: Object.keys(listMapping).length,
+            cardsCreated: cardsCreated
+          }
+        };
 
         resolve({
           statusCode: 200,
-          body: JSON.stringify({
-            success: true,
-            message: 'Tablero importado exitosamente',
-            details: { boardUrl: boardUrl }
-          })
+          body: JSON.stringify(responseData)
         });
 
       } catch (error) {
         console.error('Error en la importación:', error);
         resolve({
           statusCode: 500,
-          body: JSON.stringify({ success: false, message: `Error: ${error.message}` })
+          body: JSON.stringify({ success: false, message: `Error en la importación: ${error.message}` })
         });
       }
     });
 
-    // Inicia el procesamiento de la petición
-    // Se necesita decodificar el cuerpo de la base64, que es el formato de Netlify Functions
+    // Iniciar el procesamiento del cuerpo de la petición
     busboy.end(Buffer.from(event.body, 'base64'));
   });
 };
