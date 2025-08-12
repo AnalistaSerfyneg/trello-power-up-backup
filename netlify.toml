@@ -1,6 +1,6 @@
 [build]
-  command = "echo 'No build step required'" # Usamos un comando que no falla
-  publish = "public"
+  command = "echo 'No build step required'" # No necesitamos un comando de build
+  publish = "public" # Servir archivos estáticos desde esta carpeta
 
 [functions]
   directory = "netlify/functions"

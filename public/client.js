@@ -1,213 +1,109 @@
-// Inicialización del Power-Up de Trello
-if (typeof TrelloPowerUp !== 'undefined') {
-    TrelloPowerUp.initialize({
-        'board-buttons': function(t, opts) {
-            return [{
-                icon: 'https://cdn.glitch.com/1b42d7fe-bda8-4af8-a6c8-eff0cea9e08a%2Ftrello-logo-blue.svg',
-                text: 'Importar JSON',
-                callback: function(t) {
-                    return t.popup({
-                        title: 'Importador de JSON',
-                        url: './index.html',
-                        height: 500
-                    });
-                }
-            }];
+/* eslint-disable no-console */
+/* global TrelloPowerUp */
+
+const t = TrelloPowerUp.iframe();
+
+// Objeto para almacenar las propiedades del Power-Up
+const POWERUP_PROPS = {
+  appName: 'Importador de Tableros Trello',
+  icon: './icon.png'
+};
+
+// Función para obtener la URL de un tablero
+const getBoardUrl = (boardId) => {
+  return `https://trello.com/b/${boardId}`;
+};
+
+// Función para inicializar y registrar el Power-Up
+const initializePowerUp = () => {
+  window.TrelloPowerUp.initialize({
+    'card-buttons': (trello, options) => {
+      return [{
+        icon: POWERUP_PROPS.icon,
+        text: POWERUP_PROPS.appName,
+        callback: (trello) => {
+          return trello.modal({
+            title: POWERUP_PROPS.appName,
+            url: 'https://jocular-macaron-289a07.netlify.app/index.html', 
+            fullscreen: true
+          });
         }
+      }];
+    },
+    'on-authorize': (t, options) => {
+      // Puedes manejar la autorización aquí si es necesario
+    },
+    'on-deauthorize': (t, options) => {
+      // Puedes manejar la desautorización aquí
+    }
+  });
+};
+
+// Función para mostrar mensajes de estado
+const showStatusMessage = (message, isError = false) => {
+  const statusElement = document.getElementById('status-message');
+  if (statusElement) {
+    statusElement.textContent = message;
+    statusElement.className = isError ? 'error' : 'success';
+    statusElement.style.display = 'block';
+  }
+};
+
+// Función principal para manejar el envío del formulario
+const handleFormSubmit = async (event) => {
+  event.preventDefault();
+
+  const form = document.getElementById('import-form');
+  const fileInput = document.getElementById('json-file');
+
+  if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+    showStatusMessage('Por favor, selecciona un archivo JSON', true);
+    return;
+  }
+
+  showStatusMessage('Subiendo y restaurando tablero...', false);
+  
+  const formData = new FormData();
+  formData.append('jsonFile', fileInput.files[0]);
+
+  try {
+    const response = await fetch('/import-json', {
+      method: 'POST',
+      body: formData
     });
-}
 
-// Variables globales
-let selectedFile = null;
+    if (!response.ok) {
+      // Si el servidor responde con un error (ej. 400, 500)
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Error en el servidor');
+    }
 
-// Referencias a elementos del DOM
-const uploadArea = document.getElementById('uploadArea');
-const fileInput = document.getElementById('jsonFile');
-const selectedFileDiv = document.getElementById('selectedFile');
-const fileNameSpan = document.getElementById('fileName');
-const importForm = document.getElementById('importForm');
-const importBtn = document.getElementById('importBtn');
-const statusArea = document.getElementById('statusArea');
+    const result = await response.json();
+    console.log('Importación exitosa:', result);
+    
+    // Muestra el resultado de la importación
+    const boardUrl = result.details.boardUrl;
+    showStatusMessage(`¡Tablero importado con éxito! Puedes verlo aquí: ${boardUrl}`, false);
+    
+    // Opcional: Cerrar el modal del Power-Up después de un tiempo
+    setTimeout(() => {
+      t.closeModal();
+    }, 5000);
 
-// Configurar event listeners cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    setupEventListeners();
+  } catch (error) {
+    console.error('Error en la importación:', error);
+    showStatusMessage(`Error: ${error.message}`, true);
+  } finally {
+    // Restablece el formulario
+    form.reset();
+  }
+};
+
+// Se ejecuta una vez que el DOM está cargado
+document.addEventListener('DOMContentLoaded', () => {
+  const form = document.getElementById('import-form');
+  if (form) {
+    form.addEventListener('submit', handleFormSubmit);
+  }
+  initializePowerUp();
 });
-
-function setupEventListeners() {
-    // Event listeners para el área de carga
-    uploadArea.addEventListener('click', () => {
-        fileInput.click();
-    });
-
-    // Drag and drop functionality
-    uploadArea.addEventListener('dragover', handleDragOver);
-    uploadArea.addEventListener('dragleave', handleDragLeave);
-    uploadArea.addEventListener('drop', handleDrop);
-
-    // Input file change
-    fileInput.addEventListener('change', handleFileSelect);
-
-    // Form submission
-    importForm.addEventListener('submit', handleFormSubmit);
-}
-
-// Manejo de drag and drop
-function handleDragOver(e) {
-    e.preventDefault();
-    uploadArea.classList.add('dragover');
-}
-
-function handleDragLeave(e) {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-}
-
-function handleDrop(e) {
-    e.preventDefault();
-    uploadArea.classList.remove('dragover');
-    
-    const files = e.dataTransfer.files;
-    if (files.length > 0) {
-        const file = files[0];
-        if (isValidJSONFile(file)) {
-            fileInput.files = files;
-            handleFileSelect({ target: { files: [file] } });
-        } else {
-            showStatusMessage('Por favor, selecciona un archivo JSON válido.', 'error');
-        }
-    }
-}
-
-// Manejo de selección de archivo
-function handleFileSelect(e) {
-    const file = e.target.files[0];
-    if (file) {
-        if (isValidJSONFile(file)) {
-            selectedFile = file;
-            fileNameSpan.textContent = `📄 ${file.name} (${formatFileSize(file.size)})`;
-            selectedFileDiv.classList.add('show');
-            importBtn.disabled = false;
-            clearStatusMessages();
-            console.log('Archivo seleccionado:', file.name, file.size);
-        } else {
-            showStatusMessage('Por favor, selecciona un archivo JSON válido.', 'error');
-            resetFileSelection();
-        }
-    }
-}
-
-// Validar que el archivo sea JSON
-function isValidJSONFile(file) {
-    return file.type === 'application/json' || file.name.toLowerCase().endsWith('.json');
-}
-
-// Formatear tamaño de archivo
-function formatFileSize(bytes) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
-// Resetear selección de archivo
-function resetFileSelection() {
-    selectedFile = null;
-    selectedFileDiv.classList.remove('show');
-    importBtn.disabled = true;
-    fileInput.value = '';
-}
-
-async function handleFormSubmit(e) {
-    e.preventDefault();
-    
-    if (!selectedFile || !selectedFile.name) {
-        showStatusMessage('Por favor, selecciona un archivo JSON para importar.', 'error');
-        return;
-    }
-
-    showStatusMessage('<span class="loading-spinner"></span>Subiendo archivo y creando tablero...', 'info');
-    importBtn.disabled = true;
-    importBtn.textContent = 'Importando...';
-
-    try {
-        console.log('Iniciando envío a /import-json con método:', 'POST');
-        const formData = new FormData();
-        formData.append('jsonFile', selectedFile);
-        console.log('FormData contenido:', Object.fromEntries(formData)); // Esto intentará mostrar el contenido
-
-        const response = await fetch('/import-json', {
-            method: 'POST',
-            body: formData
-        });
-
-        console.log('Respuesta recibida:', response.status, response.statusText);
-        const result = await response.json();
-
-        if (result.success) {
-            const successMessage = `
-                <strong>✅ ¡Importación exitosa!</strong><br><br>
-                📋 <strong>Tablero:</strong> ${result.details.boardName}<br>
-                📝 <strong>Listas creadas:</strong> ${result.details.listsCreated}<br>
-                🃏 <strong>Tarjetas creadas:</strong> ${result.details.cardsCreated}<br><br>
-                <a href="${result.details.boardUrl}" target="_blank" style="color: #0079bf; text-decoration: none;">
-                    🔗 <strong>Ver tablero en Trello →</strong>
-                </a>
-            `;
-            showStatusMessage(successMessage, 'success');
-            setTimeout(() => {
-                resetFileSelection();
-                importBtn.textContent = 'Importar Tablero a Trello';
-            }, 1000);
-        } else {
-            showStatusMessage(`❌ Error: ${result.message}`, 'error');
-        }
-    } catch (error) {
-        console.error('Error en la importación:', error);
-        showStatusMessage('❌ Error de conexión. Por favor, intenta nuevamente.', 'error');
-    } finally {
-        importBtn.disabled = false;
-        importBtn.textContent = 'Importar Tablero a Trello';
-    }
-}
-
-// Mostrar mensaje de estado
-function showStatusMessage(message, type) {
-    clearStatusMessages();
-    
-    const messageDiv = document.createElement('div');
-    messageDiv.className = `status-message status-${type} show`;
-    messageDiv.innerHTML = message;
-    
-    statusArea.appendChild(messageDiv);
-    
-    if (type === 'success') {
-        setTimeout(() => {
-            messageDiv.classList.remove('show');
-            setTimeout(() => {
-                if (messageDiv.parentNode) messageDiv.parentNode.removeChild(messageDiv);
-            }, 300);
-        }, 10000);
-    }
-}
-
-// Limpiar mensajes de estado
-function clearStatusMessages() {
-    const messages = statusArea.querySelectorAll('.status-message');
-    messages.forEach(message => {
-        message.classList.remove('show');
-        setTimeout(() => {
-            if (message.parentNode) message.parentNode.removeChild(message);
-        }, 300);
-    });
-}
-
-// Funcionalidad adicional para Power-Up
-if (typeof TrelloPowerUp !== 'undefined') {
-    window.TrelloRender = function(t) {
-        return t.render(function() {
-            console.log('Power-Up renderizado correctamente');
-        });
-    };
-}
