@@ -7,6 +7,11 @@ require('dotenv').config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+require('dotenv').config();
+
+console.log(process.env.API_KEY); // para verificar
+
+
 // Configuración de multer para manejar archivos subidos
 const upload = multer({
   dest: 'uploads/',
