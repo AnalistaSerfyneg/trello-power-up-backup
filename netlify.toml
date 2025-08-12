@@ -1,7 +1,7 @@
 [build]
-  base = "project"
-  command = "pwd && ls -la && npm run"
-  publish = "project/public"
+  base = "powertrellobackupgratis"
+  command = "npm run build"
+  publish = "powertrellobackupgratis/public"
 
 [[redirects]]
   from = "/*"
