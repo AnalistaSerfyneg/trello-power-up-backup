@@ -1,86 +1,74 @@
+const Trello = require('trello');
 const Busboy = require('busboy');
 
 exports.handler = async (event, context) => {
+  // Asegurarse de que el método sea POST
   if (event.httpMethod !== 'POST') {
     return {
       statusCode: 405,
-      body: JSON.stringify({ error: 'Method Not Allowed. Use POST.' })
+      body: JSON.stringify({ message: 'Method Not Allowed' })
     };
   }
 
-  // Si no hay un cuerpo, no hay archivo
-  if (!event.body) {
-    return {
-      statusCode: 400,
-      body: JSON.stringify({ success: false, message: 'No se recibió ningún archivo' })
-    };
-  }
-
-  // Devolvemos una Promesa para manejar la asincronía de busboy
-  return new Promise((resolve, reject) => {
+  // Usamos una promesa para manejar el stream de datos
+  return new Promise((resolve) => {
+    // Necesitas el 'content-type' para que Busboy funcione
     const busboy = Busboy({
       headers: {
-        'content-type': event.headers['content-type']
+        'content-type': event.headers['content-type'],
+        ...event.headers
       }
     });
 
     let fileContent = '';
 
-    // Maneja el archivo que se sube
     busboy.on('file', (fieldname, file, filename, encoding, mimetype) => {
       file.on('data', data => {
         fileContent += data.toString();
       });
-
       file.on('end', () => {
-        console.log('Archivo recibido, tamaño:', fileContent.length);
+        console.log(`Archivo recibido: ${filename}, Content-Type: ${mimetype}`);
       });
     });
 
-    // Maneja los errores
-    busboy.on('error', (err) => {
-      console.error('Error de Busboy:', err);
-      resolve({
-        statusCode: 500,
-        body: JSON.stringify({ success: false, message: 'Error al procesar el archivo' })
-      });
-    });
-
-    // Procesa todos los campos y cuando termina, ejecuta la lógica
     busboy.on('finish', async () => {
+      if (!fileContent) {
+        resolve({
+          statusCode: 400,
+          body: JSON.stringify({ success: false, message: 'No se subió ningún archivo' })
+        });
+        return;
+      }
+      
       try {
         const jsonData = JSON.parse(fileContent);
+
+        // Aquí va tu lógica de Trello, la que tienes en tu server.js original
+        // Copia toda la lógica para crear el tablero, listas y tarjetas.
         
-        // --- Aquí va tu lógica para usar la API de Trello ---
-        // Usa la librería 'trello' para crear el tablero, listas y tarjetas.
-        // Asegúrate de que las credenciales de la API están en las variables de entorno de Netlify.
-        
-        // Simulación de éxito
-        const responseData = {
-          success: true,
-          message: 'Tablero restaurado con éxito',
-          details: { 
-            boardName: 'Nombre del Tablero del JSON', 
-            listsCreated: jsonData.lists.length, 
-            cardsCreated: jsonData.cards.length
-          }
-        };
+        // Simulación de éxito. Reemplaza con el resultado real de tu lógica.
+        const boardUrl = "https://trello.com/b/example"; // Debes obtener esto de la respuesta de Trello
 
         resolve({
           statusCode: 200,
-          body: JSON.stringify(responseData)
+          body: JSON.stringify({
+            success: true,
+            message: 'Tablero importado exitosamente',
+            details: { boardUrl: boardUrl }
+          })
         });
 
-      } catch (err) {
-        console.error('Error al parsear el JSON o al usar la API:', err);
+      } catch (error) {
+        console.error('Error en la importación:', error);
         resolve({
-          statusCode: 400,
-          body: JSON.stringify({ success: false, message: 'Archivo JSON inválido o error en la API.' })
+          statusCode: 500,
+          body: JSON.stringify({ success: false, message: `Error: ${error.message}` })
         });
       }
     });
-    
+
     // Inicia el procesamiento de la petición
-    busboy.end(event.body);
+    // Se necesita decodificar el cuerpo de la base64, que es el formato de Netlify Functions
+    busboy.end(Buffer.from(event.body, 'base64'));
   });
 };

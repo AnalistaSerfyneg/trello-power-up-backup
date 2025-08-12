@@ -4,8 +4,8 @@
 
 [functions]
   directory = "netlify/functions"
-
+  
 [[redirects]]
-  from = "/*"
-  to = "/.netlify/functions/server"
+  from = "/import-json"
+  to = "/.netlify/functions/import-json"
   status = 200
