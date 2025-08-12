@@ -2,7 +2,6 @@
   "name": "trello-import-powerup",
   "version": "1.0.0",
   "description": "Trello Power-Up to import a JSON file.",
-  "main": "server.js",
   "scripts": {
     "build": "npm install --prefix netlify/functions/",
     "start": "node server.js"
