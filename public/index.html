@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Importador de Tableros Trello</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: linear-gradient(135deg, #0079bf 0%, #005a8b 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #0079bf, #005a8b);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #0079bf;
+            background-color: #f8fafc;
+        }
+
+        .upload-area.dragover {
+            border-color: #0079bf;
+            background-color: #e8f4f8;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: #0079bf;
+            margin-bottom: 16px;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            color: #333;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .upload-subtext {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .selected-file {
+            background: #f0f8ff;
+            border: 1px solid #0079bf;
+            border-radius: 6px;
+            padding: 12px;
+            margin: 16px 0;
+            display: none;
+        }
+
+        .selected-file.show {
+            display: block;
+        }
+
+        .file-name {
+            font-weight: 500;
+            color: #0079bf;
+        }
+
+        .import-btn {
+            background: linear-gradient(135deg, #0079bf, #005a8b);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .import-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 121, 191, 0.3);
+        }
+
+        .import-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status-area {
+            margin-top: 30px;
+            min-height: 60px;
+        }
+
+        .status-message {
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-weight: 500;
+            display: none;
+        }
+
+        .status-message.show {
+            display: block;
+        }
+
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .status-info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #f3f3f3;
+            border-top: 2px solid #0079bf;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .instructions {
+            background: #f8f9fa;
+            border-radius: 6px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .instructions h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .instructions ol {
+            padding-left: 20px;
+            color: #555;
+        }
+
+        .instructions li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📋 Importador de Tableros Trello</h1>
+            <p>Sube tu archivo JSON de Trello y recrearemos tu tablero completo</p>
+        </div>
+
+        <div class="content">
+            <div class="instructions">
+                <h3>📝 Instrucciones:</h3>
+                <ol>
+                    <li>Exporta tu tablero desde Trello (Menú → Más → Imprimir y exportar → Exportar JSON)</li>
+                    <li>Descarga el archivo JSON a tu computadora</li>
+                    <li>Sube el archivo usando el área de abajo</li>
+                    <li>Haz clic en "Importar Tablero" y espera la confirmación</li>
+                </ol>
+            </div>
+
+            <form id="importForm">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📤</div>
+                    <div class="upload-text">Arrastra tu archivo JSON aquí</div>
+                    <div class="upload-subtext">o haz clic para seleccionar</div>
+                    <input type="file" 
+                           id="jsonFile" 
+                           name="jsonFile" 
+                           class="file-input" 
+                           accept=".json,application/json" 
+                           required>
+                </div>
+
+                <div class="selected-file" id="selectedFile">
+                    <div class="file-name" id="fileName"></div>
+                </div>
+
+                <button type="submit" class="import-btn" id="importBtn">
+                    Importar Tablero a Trello
+                </button>
+            </form>
+
+            <div class="status-area" id="statusArea">
+                <!-- Los mensajes de estado aparecerán aquí -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Script de Trello Power-Up -->
+    <script src="https://p.trellocdn.com/power-up.min.js"></script>
+    
+    <!-- Script del cliente -->
+    <script src="client.js"></script>
+</body>
+</html>
